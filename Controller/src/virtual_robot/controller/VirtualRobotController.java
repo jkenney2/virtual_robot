@@ -33,11 +33,9 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import virtual_robot.controller.robots.classes.MechanumBot;
-import virtual_robot.controller.robots.classes.TwoWheelBot;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -351,7 +349,7 @@ public class VirtualRobotController {
                 @Override
                 public void run() {
                     bot.updateDisplay();
-                    pathLine.getPoints().addAll(halfFieldWidth + bot.x, halfFieldWidth - bot.y);
+                    pathLine.getPoints().addAll(halfFieldWidth + bot.getX(), halfFieldWidth - bot.getY());
                     updateTelemetryDisplay();
                 }
             };
@@ -397,6 +395,8 @@ public class VirtualRobotController {
             opMode.init();
 
             while (!opModeStarted && !Thread.currentThread().isInterrupted()) {
+                // to keep the guarantee that this is updated
+                opMode.time = opMode.getRuntime();
                 //For regular opMode, run user-defined init_loop() method. For Linear opMode, init_loop checks whether
                 //runOpMode has exited; if so, it interrupts the opModeThread.
                 opMode.init_loop();
@@ -412,13 +412,17 @@ public class VirtualRobotController {
 
             }
 
-            //For regular opMode, run user-defined stop() method, if any. For Linear opMode, the start() method
+            //For regular opMode, run user-defined start() method, if any. For Linear opMode, the start() method
             //will allow waitForStart() to finish executing.
             if (!Thread.currentThread().isInterrupted()) opMode.start();
 
             while (opModeStarted && !Thread.currentThread().isInterrupted()) {
                 //For regular opMode, run user-defined loop() method. For Linear opMode, loop() checks whether
                 //runOpMode has exited; if so, it interrupts the opModeThread.
+
+                // to keep the guarantee that this is updated
+                opMode.time = opMode.getRuntime();
+
                 opMode.loop();
                 //For regular op mode only, update telemetry after each execution of loop()
                 //For linear op mode, do-nothing
@@ -576,18 +580,7 @@ public class VirtualRobotController {
             if (distanceMM < MIN_DISTANCE) result = MIN_DISTANCE - 1.0;
             else if (distanceMM > MAX_DISTANCE) result = distanceOutOfRange;
             else result = distanceMM;
-            switch(distanceUnit){
-                case METER:
-                    return result / 1000.0;
-                case CM:
-                    return result / 10.0;
-                case MM:
-                    return result;
-                case INCH:
-                    return result / 25.4;
-                default:
-                    return result;
-            }
+            return distanceUnit.fromMm(result);
         }
 
         public synchronized void updateDistance(double x, double y, double headingRadians){
